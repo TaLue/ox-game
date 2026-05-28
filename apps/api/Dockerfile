@@ -26,8 +26,10 @@ COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/prisma ./prisma
+COPY apps/api/start.sh ./start.sh
+RUN chmod +x start.sh
 
 RUN npx prisma generate
 
 EXPOSE 4000
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && echo 'Starting NestJS...' && node apps/api/dist/apps/api/src/main 2>&1"]
+CMD ["sh", "start.sh"]
