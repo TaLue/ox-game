@@ -30,4 +30,4 @@ COPY --from=builder /app/prisma ./prisma
 RUN npx prisma generate
 
 EXPOSE 4000
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && echo 'Starting NestJS...' && node apps/api/dist/apps/api/src/main"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && echo 'Starting NestJS...' && node apps/api/dist/apps/api/src/main 2>&1"]
