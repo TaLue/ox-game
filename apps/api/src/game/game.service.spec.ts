@@ -34,8 +34,8 @@ function makePrisma(game: FakeGame = makeGame()): PrismaMock {
   };
 }
 
-const ZERO_SCORE = { easyCurrentStreak: 0, easyBestStreak: 0, hardCurrentStreak: 0, hardBestStreak: 0 };
-const ONE_SCORE  = { easyCurrentStreak: 1, easyBestStreak: 1, hardCurrentStreak: 0, hardBestStreak: 0 };
+const ZERO_SCORE = { easyScore: 0, easyConsecutiveWins: 0, hardScore: 0, hardConsecutiveWins: 0 };
+const ONE_SCORE  = { easyScore: 1, easyConsecutiveWins: 1, hardScore: 0, hardConsecutiveWins: 0 };
 
 interface ScoreMock { getScore: jest.Mock; applyScore: jest.Mock; getLeaderboard: jest.Mock }
 function makeScore(): ScoreMock {

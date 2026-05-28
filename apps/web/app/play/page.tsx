@@ -11,9 +11,9 @@ import { getSocket, disconnectSocket } from '../../lib/socket';
 const INDICATOR: Record<string, { text: string; sub: string; pulse: boolean }> = {
   IN_PROGRESS_PLAYER: { text: 'YOUR TURN', sub: 'Playing as ✕', pulse: true },
   IN_PROGRESS_BOT:    { text: 'BOT THINKING...', sub: '', pulse: true },
-  PLAYER_WIN:         { text: 'YOU WIN', sub: 'Streak +1 🔥', pulse: false },
-  BOT_WIN:            { text: 'BOT WINS', sub: 'Streak reset', pulse: false },
-  DRAW:               { text: 'DRAW', sub: 'No streak change', pulse: false },
+  PLAYER_WIN:         { text: 'YOU WIN', sub: '+1 point', pulse: false },
+  BOT_WIN:            { text: 'BOT WINS', sub: '-1 point', pulse: false },
+  DRAW:               { text: 'DRAW', sub: 'No change', pulse: false },
 };
 
 function indicatorKey(status: string, loading: boolean) {
@@ -56,10 +56,10 @@ export default function PlayPage() {
   const indicator = game ? INDICATOR[indicatorKey(game.status, loading)] : null;
   const diff = game?.difficulty as Difficulty | undefined ?? difficulty;
 
-  const easyStreak = score?.easyCurrentStreak ?? 0;
-  const easyBest   = score?.easyBestStreak ?? 0;
-  const hardStreak = score?.hardCurrentStreak ?? 0;
-  const hardBest   = score?.hardBestStreak ?? 0;
+  const easyScore   = score?.easyScore ?? 0;
+  const easyConsWin = score?.easyConsecutiveWins ?? 0;
+  const hardScore   = score?.hardScore ?? 0;
+  const hardConsWin = score?.hardConsecutiveWins ?? 0;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--fg)' }}>
@@ -85,15 +85,15 @@ export default function PlayPage() {
       {/* Content */}
       <main style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px' }}>
 
-        {/* Streak cards */}
+        {/* Score cards */}
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', color: 'var(--fg-muted)', textTransform: 'uppercase', marginBottom: 10 }}>
-          Streak
+          Score
         </div>
         <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
           {(['EASY', 'HARD'] as Difficulty[]).map((d) => {
-            const active = diff === d;
-            const streak = d === 'EASY' ? easyStreak : hardStreak;
-            const best   = d === 'EASY' ? easyBest   : hardBest;
+            const active   = diff === d;
+            const pts      = d === 'EASY' ? easyScore   : hardScore;
+            const consWins = d === 'EASY' ? easyConsWin : hardConsWin;
             return (
               <div key={d} style={{
                 flex: 1,
@@ -105,10 +105,10 @@ export default function PlayPage() {
                   {d}
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>
-                  {streak > 0 ? `${streak} 🔥` : '0'}
+                  {pts}
                 </div>
                 <div style={{ fontSize: 10, fontWeight: 500, color: 'var(--fg-subtle)', marginTop: 2 }}>
-                  Best {best}
+                  {consWins > 0 ? `${consWins}/3 wins` : 'pts'}
                 </div>
               </div>
             );

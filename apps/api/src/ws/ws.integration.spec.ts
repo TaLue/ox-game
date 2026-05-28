@@ -98,7 +98,7 @@ describe('WsGateway (integration)', () => {
 
     const { WsGateway } = await import('./ws.gateway');
     const gateway = app.get(WsGateway);
-    const scorePayload = { easyCurrentStreak: 3, easyBestStreak: 5, hardCurrentStreak: 1, hardBestStreak: 2 };
+    const scorePayload = { easyScore: 3, easyConsecutiveWins: 1, hardScore: 5, hardConsecutiveWins: 2 };
     gateway.emitScoreUpdate(TEST_USER.userId, scorePayload);
 
     const received = await waitFor<typeof scorePayload>(socket, 'score:update');
@@ -112,7 +112,7 @@ describe('WsGateway (integration)', () => {
 
     const { WsGateway } = await import('./ws.gateway');
     const gateway = app.get(WsGateway);
-    const entries = [{ rank: 1, userId: 'u1', displayName: 'Alice', bestStreak: 10 }];
+    const entries = [{ rank: 1, userId: 'u1', displayName: 'Alice', score: 10 }];
     gateway.emitLeaderboardUpdate('HARD', entries);
 
     const received = await waitFor<{ difficulty: string; entries: typeof entries }>(socket, 'leaderboard:update');

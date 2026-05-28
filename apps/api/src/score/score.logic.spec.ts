@@ -1,68 +1,71 @@
-import { applyStreakRules, StreakState } from './score.logic';
+import { applyScoreRules, ScoreState } from './score.logic';
 
-const s = (currentStreak: number, bestStreak: number): StreakState => ({ currentStreak, bestStreak });
+const s = (score: number, consecutiveWins: number): ScoreState => ({ score, consecutiveWins });
 
-describe('applyStreakRules', () => {
+describe('applyScoreRules', () => {
   // ── RULE-SCORE-01: win ────────────────────────────────────────────────────
 
-  it('win from 0 → currentStreak=1, bestStreak=1 (RULE-SCORE-01)', () => {
-    expect(applyStreakRules(s(0, 0), 'PLAYER_WIN')).toEqual({ currentStreak: 1, bestStreak: 1 });
+  it('win from 0 → score=1, consecutiveWins=1 (RULE-SCORE-01)', () => {
+    expect(applyScoreRules(s(0, 0), 'PLAYER_WIN')).toEqual({ score: 1, consecutiveWins: 1 });
   });
 
-  it('win from 1 → currentStreak=2, bestStreak=2 (RULE-SCORE-01)', () => {
-    expect(applyStreakRules(s(1, 1), 'PLAYER_WIN')).toEqual({ currentStreak: 2, bestStreak: 2 });
+  it('second consecutive win → score=2, consecutiveWins=2 (RULE-SCORE-01)', () => {
+    expect(applyScoreRules(s(1, 1), 'PLAYER_WIN')).toEqual({ score: 2, consecutiveWins: 2 });
   });
 
-  it('win when current < best keeps best unchanged (RULE-SCORE-01)', () => {
-    const result = applyStreakRules(s(2, 5), 'PLAYER_WIN');
-    expect(result.currentStreak).toBe(3);
-    expect(result.bestStreak).toBe(5);
+  it('third consecutive win → bonus +1, consecutiveWins resets to 0 (RULE-SCORE-01)', () => {
+    // win +1, bonus +1: 2 → 4
+    expect(applyScoreRules(s(2, 2), 'PLAYER_WIN')).toEqual({ score: 4, consecutiveWins: 0 });
   });
 
-  it('win that ties best sets new record (RULE-SCORE-01)', () => {
-    const result = applyStreakRules(s(5, 5), 'PLAYER_WIN');
-    expect(result.currentStreak).toBe(6);
-    expect(result.bestStreak).toBe(6);
+  it('4th win after bonus → score=5, consecutiveWins=1 (RULE-SCORE-01)', () => {
+    expect(applyScoreRules(s(4, 0), 'PLAYER_WIN')).toEqual({ score: 5, consecutiveWins: 1 });
   });
 
-  it('10 consecutive wins → bestStreak=10 (RULE-SCORE-01)', () => {
+  it('6 consecutive wins → 2 bonuses, score=8, consecutiveWins=0 (RULE-SCORE-01)', () => {
     let state = s(0, 0);
-    for (let i = 0; i < 10; i++) state = applyStreakRules(state, 'PLAYER_WIN');
-    expect(state).toEqual({ currentStreak: 10, bestStreak: 10 });
+    for (let i = 0; i < 6; i++) state = applyScoreRules(state, 'PLAYER_WIN');
+    expect(state).toEqual({ score: 8, consecutiveWins: 0 });
+  });
+
+  it('7 consecutive wins → score=9, consecutiveWins=1 (RULE-SCORE-01)', () => {
+    let state = s(0, 0);
+    for (let i = 0; i < 7; i++) state = applyScoreRules(state, 'PLAYER_WIN');
+    expect(state).toEqual({ score: 9, consecutiveWins: 1 });
   });
 
   // ── RULE-SCORE-02: loss ───────────────────────────────────────────────────
 
-  it('loss resets currentStreak to 0, bestStreak preserved (RULE-SCORE-02)', () => {
-    expect(applyStreakRules(s(3, 3), 'BOT_WIN')).toEqual({ currentStreak: 0, bestStreak: 3 });
+  it('loss deducts 1 point and resets consecutiveWins (RULE-SCORE-02)', () => {
+    expect(applyScoreRules(s(5, 2), 'BOT_WIN')).toEqual({ score: 4, consecutiveWins: 0 });
   });
 
-  it('loss from 0 is a no-op on best streak (RULE-SCORE-02)', () => {
-    expect(applyStreakRules(s(0, 7), 'BOT_WIN')).toEqual({ currentStreak: 0, bestStreak: 7 });
+  it('loss cannot bring score below 0 (RULE-SCORE-02)', () => {
+    expect(applyScoreRules(s(0, 0), 'BOT_WIN')).toEqual({ score: 0, consecutiveWins: 0 });
+  });
+
+  it('loss from score=1 → score=0 (RULE-SCORE-02)', () => {
+    expect(applyScoreRules(s(1, 0), 'BOT_WIN')).toEqual({ score: 0, consecutiveWins: 0 });
+  });
+
+  it('loss resets consecutiveWins mid-streak (RULE-SCORE-02)', () => {
+    const after2wins = applyScoreRules(applyScoreRules(s(0, 0), 'PLAYER_WIN'), 'PLAYER_WIN');
+    expect(after2wins).toEqual({ score: 2, consecutiveWins: 2 });
+    expect(applyScoreRules(after2wins, 'BOT_WIN')).toEqual({ score: 1, consecutiveWins: 0 });
   });
 
   // ── RULE-SCORE-03: draw ───────────────────────────────────────────────────
 
-  it('draw does not change currentStreak or bestStreak (RULE-SCORE-03)', () => {
-    expect(applyStreakRules(s(4, 7), 'DRAW')).toEqual({ currentStreak: 4, bestStreak: 7 });
+  it('draw does not change score or consecutiveWins (RULE-SCORE-03)', () => {
+    expect(applyScoreRules(s(5, 2), 'DRAW')).toEqual({ score: 5, consecutiveWins: 2 });
   });
 
-  it('draw from 0 is a no-op (RULE-SCORE-03)', () => {
-    expect(applyStreakRules(s(0, 0), 'DRAW')).toEqual({ currentStreak: 0, bestStreak: 0 });
+  it('draw from zero is a no-op (RULE-SCORE-03)', () => {
+    expect(applyScoreRules(s(0, 0), 'DRAW')).toEqual({ score: 0, consecutiveWins: 0 });
   });
 
-  // ── Post-loss recovery ────────────────────────────────────────────────────
-
-  it('best streak preserved after loss then recovers to new record (RULE-SCORE-01, RULE-SCORE-02)', () => {
-    let state = s(0, 0);
-    for (let i = 0; i < 5; i++) state = applyStreakRules(state, 'PLAYER_WIN');
-    expect(state.bestStreak).toBe(5);
-    state = applyStreakRules(state, 'BOT_WIN');
-    expect(state).toEqual({ currentStreak: 0, bestStreak: 5 });
-    for (let i = 0; i < 3; i++) state = applyStreakRules(state, 'PLAYER_WIN');
-    expect(state.bestStreak).toBe(5); // not yet a record
-    for (let i = 0; i < 3; i++) state = applyStreakRules(state, 'PLAYER_WIN');
-    expect(state.currentStreak).toBe(6);
-    expect(state.bestStreak).toBe(6); // new record
+  it('draw preserves consecutiveWins mid-streak (RULE-SCORE-03)', () => {
+    const after2wins = applyScoreRules(applyScoreRules(s(0, 0), 'PLAYER_WIN'), 'PLAYER_WIN');
+    expect(applyScoreRules(after2wins, 'DRAW')).toEqual({ score: 2, consecutiveWins: 2 });
   });
 });

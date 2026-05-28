@@ -15,6 +15,6 @@ export class AdminScoresQueryDto {
   pageSize?: number = 10;
 
   @IsOptional()
-  @IsIn(['hardBestStreak', 'easyBestStreak', 'displayName'])
-  sort?: string = 'hardBestStreak';
+  @IsIn(['hardScore', 'easyScore', 'displayName'])
+  sort?: string = 'hardScore';
 }

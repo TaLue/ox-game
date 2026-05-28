@@ -82,20 +82,20 @@ describe('ScoreController (integration)', () => {
       const res = await request(app.getHttpServer()).get('/api/scores/me');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({
-        easyCurrentStreak: 0, easyBestStreak: 0,
-        hardCurrentStreak: 0, hardBestStreak: 0,
+        easyScore: 0, easyConsecutiveWins: 0,
+        hardScore: 0, hardConsecutiveWins: 0,
       });
     });
 
     it('returns 200 with existing Redis hot value', async () => {
       await redis.client.hset(`score:${TEST_USER.id}`,
-        'easyStreak', 3, 'easyBest', 5, 'hardStreak', 1, 'hardBest', 2,
+        'easyScore', 3, 'easyConsWins', 1, 'hardScore', 5, 'hardConsWins', 2,
       );
       const res = await request(app.getHttpServer()).get('/api/scores/me');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({
-        easyCurrentStreak: 3, easyBestStreak: 5,
-        hardCurrentStreak: 1, hardBestStreak: 2,
+        easyScore: 3, easyConsecutiveWins: 1,
+        hardScore: 5, hardConsecutiveWins: 2,
       });
     });
   });
@@ -120,14 +120,14 @@ describe('ScoreController (integration)', () => {
       const res = await request(app.getHttpServer()).get('/api/leaderboard');
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
-      expect(res.body[0]).toMatchObject({ rank: 1, userId: TEST_USER.id, bestStreak: 7 });
+      expect(res.body[0]).toMatchObject({ rank: 1, userId: TEST_USER.id, score: 7 });
     });
 
     it('reads leaderboard:easy when ?difficulty=EASY', async () => {
       await redis.client.zadd('leaderboard:easy', 4, TEST_USER.id);
       const res = await request(app.getHttpServer()).get('/api/leaderboard?difficulty=EASY');
       expect(res.status).toBe(200);
-      expect(res.body[0]).toMatchObject({ rank: 1, userId: TEST_USER.id, bestStreak: 4 });
+      expect(res.body[0]).toMatchObject({ rank: 1, userId: TEST_USER.id, score: 4 });
     });
 
     it('respects ?limit query param', async () => {
@@ -140,12 +140,12 @@ describe('ScoreController (integration)', () => {
     it('falls back to Postgres when Redis ZSET is empty (D12)', async () => {
       await prisma.score.upsert({
         where: { userId: TEST_USER.id },
-        create: { userId: TEST_USER.id, hardBestStreak: 5 },
-        update: { hardBestStreak: 5 },
+        create: { userId: TEST_USER.id, hardScore: 5 },
+        update: { hardScore: 5 },
       });
       const res = await request(app.getHttpServer()).get('/api/leaderboard');
       expect(res.status).toBe(200);
-      expect(res.body[0]).toMatchObject({ userId: TEST_USER.id, bestStreak: 5 });
+      expect(res.body[0]).toMatchObject({ userId: TEST_USER.id, score: 5 });
     });
   });
 
@@ -161,8 +161,8 @@ describe('ScoreController (integration)', () => {
         svc.applyScore(TEST_USER.id, 'PLAYER_WIN', 'HARD'),
       ]);
 
-      const finalStreak = Math.max(r1.score.hardCurrentStreak, r2.score.hardCurrentStreak);
-      expect(finalStreak).toBe(2);
+      const finalScore = Math.max(r1.score.hardScore, r2.score.hardScore);
+      expect(finalScore).toBe(2);
     });
   });
 });

@@ -87,7 +87,7 @@ describe('WsGateway.emit*', () => {
     const mockEmit = jest.fn();
     const mockTo = jest.fn().mockReturnValue({ emit: mockEmit });
     gateway.server = { to: mockTo } as unknown as WsGateway['server'];
-    const score = { easyCurrentStreak: 3, easyBestStreak: 5, hardCurrentStreak: 1, hardBestStreak: 2 };
+    const score = { easyScore: 3, easyConsecutiveWins: 1, hardScore: 5, hardConsecutiveWins: 2 };
     gateway.emitScoreUpdate('user-1', score);
     expect(mockTo).toHaveBeenCalledWith('user:user-1');
     expect(mockEmit).toHaveBeenCalledWith('score:update', score);
@@ -97,7 +97,7 @@ describe('WsGateway.emit*', () => {
     const { gateway } = await buildGateway();
     const mockEmit = jest.fn();
     gateway.server = { emit: mockEmit } as unknown as WsGateway['server'];
-    const entries = [{ rank: 1, userId: 'u1', displayName: 'Alice', bestStreak: 10 }];
+    const entries = [{ rank: 1, userId: 'u1', displayName: 'Alice', score: 10 }];
     gateway.emitLeaderboardUpdate('HARD', entries);
     expect(mockEmit).toHaveBeenCalledWith('leaderboard:update', { difficulty: 'HARD', entries });
   });
@@ -105,7 +105,7 @@ describe('WsGateway.emit*', () => {
   it('emitScoreUpdate is a no-op when server is not yet initialised', async () => {
     const { gateway } = await buildGateway();
     gateway.server = null as unknown as WsGateway['server'];
-    const score = { easyCurrentStreak: 0, easyBestStreak: 0, hardCurrentStreak: 0, hardBestStreak: 0 };
+    const score = { easyScore: 0, easyConsecutiveWins: 0, hardScore: 0, hardConsecutiveWins: 0 };
     expect(() => gateway.emitScoreUpdate('u', score)).not.toThrow();
   });
 });

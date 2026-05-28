@@ -5,17 +5,17 @@ import { AdminService } from './admin.service';
 
 // ── Prisma mock factory ───────────────────────────────────────────────────────
 
-const ZERO_STREAK = { easyCurrentStreak: 0, easyBestStreak: 0, hardCurrentStreak: 0, hardBestStreak: 0 };
-const SOME_STREAK = { easyCurrentStreak: 2, easyBestStreak: 3, hardCurrentStreak: 1, hardBestStreak: 5 };
+const ZERO_SCORE = { easyScore: 0, easyConsecutiveWins: 0, hardScore: 0, hardConsecutiveWins: 0 };
+const SOME_SCORE = { easyScore: 3, easyConsecutiveWins: 2, hardScore: 5, hardConsecutiveWins: 1 };
 
 function makeUser(overrides: Partial<{
   id: string; email: string; displayName: string; role: string;
-  score: typeof SOME_STREAK | null;
+  score: typeof SOME_SCORE | null;
   games: object[];
 }> = {}) {
   return {
     id: 'user-1', email: 'p@test.com', displayName: 'Player One', role: 'PLAYER',
-    score: SOME_STREAK,
+    score: SOME_SCORE,
     games: [],
     ...overrides,
   };
@@ -44,12 +44,12 @@ async function buildService(prisma = makePrisma()) {
 describe('AdminService.getScores', () => {
   it('returns paginated AdminScoreEntry list (AUTH-06)', async () => {
     const { svc } = await buildService();
-    const result = await svc.getScores(1, 10, 'hardBestStreak');
+    const result = await svc.getScores(1, 10, 'hardScore');
     expect(result.data).toHaveLength(1);
     expect(result.data[0]).toMatchObject({
       userId: 'user-1', email: 'p@test.com',
-      easyCurrentStreak: 2, easyBestStreak: 3,
-      hardCurrentStreak: 1, hardBestStreak: 5,
+      easyScore: 3, easyConsecutiveWins: 2,
+      hardScore: 5, hardConsecutiveWins: 1,
     });
     expect(result.total).toBe(1);
     expect(result.page).toBe(1);
@@ -59,12 +59,12 @@ describe('AdminService.getScores', () => {
   it('defaults score to zeros when user has no score record', async () => {
     const { svc } = await buildService(makePrisma([makeUser({ score: null })]));
     const result = await svc.getScores();
-    expect(result.data[0]).toMatchObject(ZERO_STREAK);
+    expect(result.data[0]).toMatchObject(ZERO_SCORE);
   });
 
   it('uses skip/take based on page and pageSize', async () => {
     const { svc, prisma } = await buildService();
-    await svc.getScores(3, 5, 'hardBestStreak');
+    await svc.getScores(3, 5, 'hardScore');
     expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 10, take: 5 }));
   });
 
@@ -76,19 +76,19 @@ describe('AdminService.getScores', () => {
     );
   });
 
-  it('orders by score.hardBestStreak desc by default', async () => {
+  it('orders by score.hardScore desc by default', async () => {
     const { svc, prisma } = await buildService();
-    await svc.getScores(1, 10, 'hardBestStreak');
+    await svc.getScores(1, 10, 'hardScore');
     expect(prisma.user.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: { score: { hardBestStreak: 'desc' } } }),
+      expect.objectContaining({ orderBy: { score: { hardScore: 'desc' } } }),
     );
   });
 
-  it('orders by score.easyBestStreak desc when sort=easyBestStreak', async () => {
+  it('orders by score.easyScore desc when sort=easyScore', async () => {
     const { svc, prisma } = await buildService();
-    await svc.getScores(1, 10, 'easyBestStreak');
+    await svc.getScores(1, 10, 'easyScore');
     expect(prisma.user.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: { score: { easyBestStreak: 'desc' } } }),
+      expect.objectContaining({ orderBy: { score: { easyScore: 'desc' } } }),
     );
   });
 });
@@ -108,7 +108,7 @@ describe('AdminService.getPlayerDetail', () => {
 
     const result = await svc.getPlayerDetail('user-1');
     expect(result.userId).toBe('user-1');
-    expect(result.score).toEqual(SOME_STREAK);
+    expect(result.score).toEqual(SOME_SCORE);
     expect(result.recentGames).toHaveLength(1);
     expect(result.recentGames[0]).toMatchObject({ id: 'g1', status: 'PLAYER_WIN' });
   });

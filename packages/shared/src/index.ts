@@ -6,10 +6,10 @@ export type Difficulty = 'EASY' | 'HARD';
 export type Role = 'PLAYER' | 'ADMIN';
 
 export interface ScoreDto {
-  easyCurrentStreak: number;
-  easyBestStreak: number;
-  hardCurrentStreak: number;
-  hardBestStreak: number;
+  easyScore: number;
+  easyConsecutiveWins: number;
+  hardScore: number;
+  hardConsecutiveWins: number;
 }
 
 export interface MeDto {
@@ -39,7 +39,7 @@ export interface LeaderboardEntry {
   rank: number;
   userId: string;
   displayName: string;
-  bestStreak: number;
+  score: number;
 }
 
 export interface AdminScoreEntry {
@@ -47,10 +47,10 @@ export interface AdminScoreEntry {
   email: string;
   displayName: string;
   role: Role;
-  easyBestStreak: number;
-  hardBestStreak: number;
-  easyCurrentStreak: number;
-  hardCurrentStreak: number;
+  easyScore: number;
+  easyConsecutiveWins: number;
+  hardScore: number;
+  hardConsecutiveWins: number;
 }
 
 export interface RecentGameEntry {

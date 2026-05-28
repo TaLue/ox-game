@@ -210,7 +210,7 @@ describe('GameController (integration)', () => {
       expect(res.body.board[8]).toBe('O');   // bot's move
       expect(res.body.botMove).toBe(8);
       expect(res.body.status).toBe('IN_PROGRESS');
-      expect(res.body.score).toHaveProperty('easyCurrentStreak');
+      expect(res.body.score).toHaveProperty('easyScore');
     });
 
     it('player wins: botMove is null and status is PLAYER_WIN (RULE-GAME-05)', async () => {
@@ -232,7 +232,7 @@ describe('GameController (integration)', () => {
     });
 
     it('winning game updates score (acceptance criteria ยง12.3)', async () => {
-      // Acceptance: a win increments easyCurrentStreak (game created with default EASY difficulty)
+      // Acceptance: a win increments easyScore (game created with default EASY difficulty)
       const create = await request(app.getHttpServer()).post('/api/games').send({});
       const id = create.body.id;
       await prisma.game.update({
@@ -242,7 +242,7 @@ describe('GameController (integration)', () => {
       const res = await request(app.getHttpServer())
         .post(`/api/games/${id}/move`)
         .send({ position: 2 });
-      expect(res.body.score.easyCurrentStreak).toBeGreaterThanOrEqual(1);
+      expect(res.body.score.easyScore).toBeGreaterThanOrEqual(1);
     });
   });
 });

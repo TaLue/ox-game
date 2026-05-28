@@ -14,14 +14,14 @@ export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** AUTH-06: returns paginated user list with scores for admin consumption. */
-  async getScores(page = 1, pageSize = 10, sort = 'hardBestStreak'): Promise<Paginated<AdminScoreEntry>> {
+  async getScores(page = 1, pageSize = 10, sort = 'hardScore'): Promise<Paginated<AdminScoreEntry>> {
     const skip = (page - 1) * pageSize;
     const orderBy =
       sort === 'displayName'
         ? ({ displayName: 'asc' } as const)
-        : sort === 'easyBestStreak'
-        ? ({ score: { easyBestStreak: 'desc' } } as const)
-        : ({ score: { hardBestStreak: 'desc' } } as const);
+        : sort === 'easyScore'
+        ? ({ score: { easyScore: 'desc' } } as const)
+        : ({ score: { hardScore: 'desc' } } as const);
 
     const [users, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({ skip, take: pageSize, include: { score: true }, orderBy }),
@@ -33,10 +33,10 @@ export class AdminService {
       email: u.email,
       displayName: u.displayName,
       role: u.role as Role,
-      easyCurrentStreak: u.score?.easyCurrentStreak ?? 0,
-      easyBestStreak:    u.score?.easyBestStreak    ?? 0,
-      hardCurrentStreak: u.score?.hardCurrentStreak ?? 0,
-      hardBestStreak:    u.score?.hardBestStreak    ?? 0,
+      easyScore:           u.score?.easyScore           ?? 0,
+      easyConsecutiveWins: u.score?.easyConsecutiveWins ?? 0,
+      hardScore:           u.score?.hardScore           ?? 0,
+      hardConsecutiveWins: u.score?.hardConsecutiveWins ?? 0,
     }));
 
     return { data, total, page, pageSize };
@@ -70,10 +70,10 @@ export class AdminService {
       displayName: user.displayName,
       role: user.role as Role,
       score: {
-        easyCurrentStreak: user.score?.easyCurrentStreak ?? 0,
-        easyBestStreak:    user.score?.easyBestStreak    ?? 0,
-        hardCurrentStreak: user.score?.hardCurrentStreak ?? 0,
-        hardBestStreak:    user.score?.hardBestStreak    ?? 0,
+        easyScore:           user.score?.easyScore           ?? 0,
+        easyConsecutiveWins: user.score?.easyConsecutiveWins ?? 0,
+        hardScore:           user.score?.hardScore           ?? 0,
+        hardConsecutiveWins: user.score?.hardConsecutiveWins ?? 0,
       },
       recentGames: user.games.map((g) => ({
         id: g.id,

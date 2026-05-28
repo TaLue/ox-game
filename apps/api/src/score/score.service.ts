@@ -6,32 +6,37 @@ import { RedisService } from '../redis/redis.service';
 type GameResult = 'PLAYER_WIN' | 'BOT_WIN' | 'DRAW';
 
 /**
- * Redis Lua — atomically updates the per-difficulty streak hash and leaderboard ZSET.
+ * Redis Lua — atomically applies point scoring to per-difficulty hash and updates leaderboard ZSET.
  * RULE-SCORE-06: single Lua call prevents race conditions.
  *
- * KEYS[1] = score:{userId}       (hash: easyStreak, easyBest, hardStreak, hardBest)
- * KEYS[2] = leaderboard:easy|hard (sorted set by bestStreak)
+ * KEYS[1] = score:{userId}        (hash: easyScore, easyConsWins, hardScore, hardConsWins)
+ * KEYS[2] = leaderboard:easy|hard (sorted set ranked by total score)
  * ARGV[1] = result   (PLAYER_WIN | BOT_WIN | DRAW)
  * ARGV[2] = userId
  * ARGV[3] = diff     ('easy' | 'hard')
- * Returns { currentStreak, bestStreak }
+ * Returns { score, consecutiveWins }
  */
 const LUA_SCORE = `
-local curField  = ARGV[3] .. 'Streak'
-local bestField = ARGV[3] .. 'Best'
-local cur  = tonumber(redis.call('HGET', KEYS[1], curField)  or '0') or 0
-local best = tonumber(redis.call('HGET', KEYS[1], bestField) or '0') or 0
+local scoreField = ARGV[3] .. 'Score'
+local consField  = ARGV[3] .. 'ConsWins'
+local sc   = tonumber(redis.call('HGET', KEYS[1], scoreField) or '0') or 0
+local cons = tonumber(redis.call('HGET', KEYS[1], consField)  or '0') or 0
 
 if ARGV[1] == 'PLAYER_WIN' then
-  cur = cur + 1
-  if cur > best then best = cur end
+  sc = sc + 1
+  cons = cons + 1
+  if cons == 3 then
+    sc = sc + 1
+    cons = 0
+  end
 elseif ARGV[1] == 'BOT_WIN' then
-  cur = 0
+  if sc > 0 then sc = sc - 1 end
+  cons = 0
 end
 
-redis.call('HSET', KEYS[1], curField, cur, bestField, best)
-redis.call('ZADD', KEYS[2], best, ARGV[2])
-return { cur, best }
+redis.call('HSET', KEYS[1], scoreField, sc, consField, cons)
+redis.call('ZADD', KEYS[2], sc, ARGV[2])
+return { sc, cons }
 `;
 
 @Injectable()
@@ -46,31 +51,31 @@ export class ScoreService {
     const h = await this.redis.client.hgetall(`score:${userId}`);
     if (h && Object.keys(h).length > 0) {
       return {
-        easyCurrentStreak: Number(h.easyStreak ?? 0),
-        easyBestStreak:    Number(h.easyBest   ?? 0),
-        hardCurrentStreak: Number(h.hardStreak ?? 0),
-        hardBestStreak:    Number(h.hardBest   ?? 0),
+        easyScore:           Number(h.easyScore    ?? 0),
+        easyConsecutiveWins: Number(h.easyConsWins ?? 0),
+        hardScore:           Number(h.hardScore    ?? 0),
+        hardConsecutiveWins: Number(h.hardConsWins ?? 0),
       };
     }
     const score = await this.prisma.score.findUnique({ where: { userId } });
     return {
-      easyCurrentStreak: score?.easyCurrentStreak ?? 0,
-      easyBestStreak:    score?.easyBestStreak    ?? 0,
-      hardCurrentStreak: score?.hardCurrentStreak ?? 0,
-      hardBestStreak:    score?.hardBestStreak    ?? 0,
+      easyScore:           score?.easyScore           ?? 0,
+      easyConsecutiveWins: score?.easyConsecutiveWins ?? 0,
+      hardScore:           score?.hardScore           ?? 0,
+      hardConsecutiveWins: score?.hardConsecutiveWins ?? 0,
     };
   }
 
   /**
-   * Atomically applies streak rules via Lua (RULE-SCORE-06), then persists to Postgres.
-   * Streak tracking is per-difficulty — EASY and HARD are independent.
+   * Atomically applies scoring rules via Lua (RULE-SCORE-06), then persists to Postgres.
+   * Score tracking is per-difficulty — EASY and HARD are independent.
    */
   async applyScore(
     userId: string,
     result: GameResult,
     difficulty: Difficulty,
   ): Promise<{ score: ScoreDto }> {
-    const diff = difficulty.toLowerCase(); // 'easy' | 'hard'
+    const diff  = difficulty.toLowerCase(); // 'easy' | 'hard'
     const lbKey = `leaderboard:${diff}`;
 
     const raw = await this.redis.client.eval(
@@ -83,37 +88,35 @@ export class ScoreService {
       diff,
     ) as [number, number];
 
-    const [cur, best] = raw;
-
-    // Read the other difficulty's current values to build the full ScoreDto
+    const [sc, cons] = raw;
     const other = await this.getScore(userId);
 
     if (difficulty === 'EASY') {
       await this.prisma.score.upsert({
         where:  { userId },
-        create: { userId, easyCurrentStreak: cur, easyBestStreak: best },
-        update: { easyCurrentStreak: cur, easyBestStreak: best },
+        create: { userId, easyScore: sc, easyConsecutiveWins: cons },
+        update: { easyScore: sc, easyConsecutiveWins: cons },
       });
       return {
         score: {
-          easyCurrentStreak: cur,
-          easyBestStreak:    best,
-          hardCurrentStreak: other.hardCurrentStreak,
-          hardBestStreak:    other.hardBestStreak,
+          easyScore:           sc,
+          easyConsecutiveWins: cons,
+          hardScore:           other.hardScore,
+          hardConsecutiveWins: other.hardConsecutiveWins,
         },
       };
     } else {
       await this.prisma.score.upsert({
         where:  { userId },
-        create: { userId, hardCurrentStreak: cur, hardBestStreak: best },
-        update: { hardCurrentStreak: cur, hardBestStreak: best },
+        create: { userId, hardScore: sc, hardConsecutiveWins: cons },
+        update: { hardScore: sc, hardConsecutiveWins: cons },
       });
       return {
         score: {
-          easyCurrentStreak: other.easyCurrentStreak,
-          easyBestStreak:    other.easyBestStreak,
-          hardCurrentStreak: cur,
-          hardBestStreak:    best,
+          easyScore:           other.easyScore,
+          easyConsecutiveWins: other.easyConsecutiveWins,
+          hardScore:           sc,
+          hardConsecutiveWins: cons,
         },
       };
     }
@@ -121,9 +124,9 @@ export class ScoreService {
 
   /** Returns top-N players from Redis ZSET for a given difficulty; rebuilds from Postgres if empty (D12). */
   async getLeaderboard(limit = 10, difficulty: Difficulty = 'HARD'): Promise<LeaderboardEntry[]> {
-    const diff  = difficulty.toLowerCase();
-    const lbKey = `leaderboard:${diff}`;
-    const bestField = difficulty === 'EASY' ? 'easyBestStreak' : 'hardBestStreak';
+    const diff    = difficulty.toLowerCase();
+    const lbKey   = `leaderboard:${diff}`;
+    const scoreField = difficulty === 'EASY' ? 'easyScore' : 'hardScore';
 
     const raw = await this.redis.client.zrevrange(lbKey, 0, limit - 1, 'WITHSCORES');
     if (raw.length > 0) {
@@ -132,7 +135,7 @@ export class ScoreService {
 
     // D12: rebuild from Postgres when Redis is flushed
     const scores = await this.prisma.score.findMany({
-      orderBy: { [bestField]: 'desc' },
+      orderBy: { [scoreField]: 'desc' },
       take: limit,
       include: { user: { select: { displayName: true } } },
     });
@@ -140,16 +143,16 @@ export class ScoreService {
       rank: i + 1,
       userId: s.userId,
       displayName: s.user.displayName,
-      bestStreak: s[bestField],
+      score: s[scoreField as keyof typeof s] as number,
     }));
   }
 
   private async entriesToLeaderboard(raw: string[]): Promise<LeaderboardEntry[]> {
     const result: LeaderboardEntry[] = [];
     for (let i = 0; i < raw.length; i += 2) {
-      const userId    = raw[i];
-      const bestStreak = Number(raw[i + 1]);
-      const user = await this.prisma.user.findUnique({
+      const userId = raw[i];
+      const score  = Number(raw[i + 1]);
+      const user   = await this.prisma.user.findUnique({
         where:  { id: userId },
         select: { displayName: true },
       });
@@ -157,7 +160,7 @@ export class ScoreService {
         rank: result.length + 1,
         userId,
         displayName: user?.displayName ?? userId,
-        bestStreak,
+        score,
       });
     }
     return result;

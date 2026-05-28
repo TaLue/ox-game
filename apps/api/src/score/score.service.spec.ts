@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ScoreService } from './score.service';
 
-const ZERO_SCORE = { easyCurrentStreak: 0, easyBestStreak: 0, hardCurrentStreak: 0, hardBestStreak: 0 };
+const ZERO_SCORE = { easyScore: 0, easyConsecutiveWins: 0, hardScore: 0, hardConsecutiveWins: 0 };
 
 function makePrisma() {
   return {
@@ -44,21 +44,21 @@ async function buildService(prisma: ReturnType<typeof makePrisma>, redis: Return
 describe('ScoreService.getScore', () => {
   it('returns Redis hot value when present', async () => {
     const redis = makeRedis();
-    redis.client.hgetall.mockResolvedValue({ easyStreak: '3', easyBest: '5', hardStreak: '1', hardBest: '2' });
+    redis.client.hgetall.mockResolvedValue({ easyScore: '3', easyConsWins: '1', hardScore: '5', hardConsWins: '2' });
     const svc = await buildService(makePrisma(), redis);
     expect(await svc.getScore('user-1')).toEqual({
-      easyCurrentStreak: 3, easyBestStreak: 5, hardCurrentStreak: 1, hardBestStreak: 2,
+      easyScore: 3, easyConsecutiveWins: 1, hardScore: 5, hardConsecutiveWins: 2,
     });
   });
 
   it('falls back to Postgres when Redis key absent', async () => {
     const prisma = makePrisma();
     prisma.score.findUnique.mockResolvedValue({
-      easyCurrentStreak: 2, easyBestStreak: 4, hardCurrentStreak: 0, hardBestStreak: 1,
+      easyScore: 2, easyConsecutiveWins: 0, hardScore: 4, hardConsecutiveWins: 1,
     });
     const svc = await buildService(prisma, makeRedis());
     expect(await svc.getScore('user-1')).toEqual({
-      easyCurrentStreak: 2, easyBestStreak: 4, hardCurrentStreak: 0, hardBestStreak: 1,
+      easyScore: 2, easyConsecutiveWins: 0, hardScore: 4, hardConsecutiveWins: 1,
     });
   });
 
@@ -93,18 +93,18 @@ describe('ScoreService.applyScore', () => {
     );
   });
 
-  it('returns updated easyStreak in ScoreDto for EASY win (RULE-SCORE-01)', async () => {
-    const svc = await buildService(makePrisma(), makeRedis([3, 3]));
+  it('returns updated easyScore in ScoreDto for EASY win (RULE-SCORE-01)', async () => {
+    const svc = await buildService(makePrisma(), makeRedis([3, 0]));
     const { score } = await svc.applyScore('user-1', 'PLAYER_WIN', 'EASY');
-    expect(score.easyCurrentStreak).toBe(3);
-    expect(score.easyBestStreak).toBe(3);
+    expect(score.easyScore).toBe(3);
+    expect(score.easyConsecutiveWins).toBe(0);
   });
 
-  it('returns updated hardStreak in ScoreDto for HARD win (RULE-SCORE-01)', async () => {
-    const svc = await buildService(makePrisma(), makeRedis([2, 5]));
+  it('returns updated hardScore in ScoreDto for HARD win (RULE-SCORE-01)', async () => {
+    const svc = await buildService(makePrisma(), makeRedis([2, 2]));
     const { score } = await svc.applyScore('user-1', 'PLAYER_WIN', 'HARD');
-    expect(score.hardCurrentStreak).toBe(2);
-    expect(score.hardBestStreak).toBe(5);
+    expect(score.hardScore).toBe(2);
+    expect(score.hardConsecutiveWins).toBe(2);
   });
 
   it('upserts Postgres with correct fields for EASY (RULE-SCORE-08)', async () => {
@@ -113,8 +113,8 @@ describe('ScoreService.applyScore', () => {
     await svc.applyScore('user-1', 'PLAYER_WIN', 'EASY');
     expect(prisma.score.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: { userId: 'user-1' },
-      create: expect.objectContaining({ userId: 'user-1', easyCurrentStreak: 2, easyBestStreak: 2 }),
-      update: expect.objectContaining({ easyCurrentStreak: 2, easyBestStreak: 2 }),
+      create: expect.objectContaining({ userId: 'user-1', easyScore: 2, easyConsecutiveWins: 2 }),
+      update: expect.objectContaining({ easyScore: 2, easyConsecutiveWins: 2 }),
     }));
   });
 });
@@ -136,7 +136,7 @@ describe('ScoreService.getLeaderboard', () => {
     expect(redis.client.zrevrange).toHaveBeenCalledWith('leaderboard:easy', 0, 9, 'WITHSCORES');
   });
 
-  it('returns entries from Redis ZSET with rank and bestStreak', async () => {
+  it('returns entries from Redis ZSET with rank and score', async () => {
     const redis = makeRedis();
     redis.client.zrevrange.mockResolvedValue(['user-1', '7', 'user-2', '4']);
     const prisma = makePrisma();
@@ -146,18 +146,18 @@ describe('ScoreService.getLeaderboard', () => {
     const svc = await buildService(prisma, redis);
     const result = await svc.getLeaderboard(10, 'HARD');
     expect(result).toEqual([
-      { rank: 1, userId: 'user-1', displayName: 'Alice', bestStreak: 7 },
-      { rank: 2, userId: 'user-2', displayName: 'Bob', bestStreak: 4 },
+      { rank: 1, userId: 'user-1', displayName: 'Alice', score: 7 },
+      { rank: 2, userId: 'user-2', displayName: 'Bob', score: 4 },
     ]);
   });
 
   it('falls back to Postgres when Redis ZSET is empty (D12)', async () => {
     const prisma = makePrisma();
     prisma.score.findMany.mockResolvedValue([
-      { userId: 'user-1', hardBestStreak: 5, user: { displayName: 'Alice' } },
+      { userId: 'user-1', hardScore: 5, user: { displayName: 'Alice' } },
     ]);
     const svc = await buildService(prisma, makeRedis());
     const result = await svc.getLeaderboard(10, 'HARD');
-    expect(result[0]).toMatchObject({ rank: 1, userId: 'user-1', bestStreak: 5 });
+    expect(result[0]).toMatchObject({ rank: 1, userId: 'user-1', score: 5 });
   });
 });

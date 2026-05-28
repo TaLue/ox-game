@@ -57,7 +57,7 @@ export default function LoginPage() {
           fontSize: 10, fontWeight: 500, letterSpacing: '1.5px',
           textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 40,
         }}>
-          Tic-Tac-Toe · Streaks · Leaderboard
+          Tic-Tac-Toe · Score · Leaderboard
         </div>
 
         {/* Top Streaks preview */}
@@ -67,7 +67,7 @@ export default function LoginPage() {
             fontSize: 10, fontWeight: 700, letterSpacing: '1.5px',
             textTransform: 'uppercase', color: 'var(--fg-muted)',
           }}>
-            Top Streaks
+            Top Scores
           </div>
           {top.length === 0 ? (
             <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--fg-subtle)' }}>
@@ -83,7 +83,7 @@ export default function LoginPage() {
               <span style={{ fontWeight: idx === 0 ? 700 : 500, fontSize: 13 }}>
                 {MEDAL[e.rank] ?? e.rank} {e.displayName}
               </span>
-              <span style={{ fontWeight: 800, fontSize: 14 }}>{e.bestStreak} 🔥</span>
+              <span style={{ fontWeight: 800, fontSize: 14 }}>{e.score} pts</span>
             </div>
           ))}
         </div>

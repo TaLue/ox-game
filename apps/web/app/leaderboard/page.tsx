@@ -127,8 +127,8 @@ export default function LeaderboardPage() {
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{e.bestStreak} 🔥</div>
-              <div style={{ fontSize: 10, fontWeight: 500, color: 'var(--fg-subtle)', marginTop: 2 }}>Best streak</div>
+              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{e.score}</div>
+              <div style={{ fontSize: 10, fontWeight: 500, color: 'var(--fg-subtle)', marginTop: 2 }}>pts</div>
             </div>
           </div>
         ))}

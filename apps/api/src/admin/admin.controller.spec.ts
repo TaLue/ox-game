@@ -127,13 +127,13 @@ describe('AdminController (integration)', () => {
       expect(res.status).toBe(200);
     });
 
-    it('accepts sort=easyBestStreak', async () => {
-      const res = await request(app.getHttpServer()).get('/api/admin/scores?sort=easyBestStreak');
+    it('accepts sort=easyScore', async () => {
+      const res = await request(app.getHttpServer()).get('/api/admin/scores?sort=easyScore');
       expect(res.status).toBe(200);
     });
 
-    it('accepts sort=hardBestStreak', async () => {
-      const res = await request(app.getHttpServer()).get('/api/admin/scores?sort=hardBestStreak');
+    it('accepts sort=hardScore', async () => {
+      const res = await request(app.getHttpServer()).get('/api/admin/scores?sort=hardScore');
       expect(res.status).toBe(200);
     });
   });

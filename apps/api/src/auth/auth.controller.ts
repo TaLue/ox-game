@@ -82,10 +82,10 @@ export class AuthController {
       displayName: dbUser.displayName,
       role: dbUser.role as 'PLAYER' | 'ADMIN',
       score: {
-        easyCurrentStreak: dbUser.score?.easyCurrentStreak ?? 0,
-        easyBestStreak:    dbUser.score?.easyBestStreak    ?? 0,
-        hardCurrentStreak: dbUser.score?.hardCurrentStreak ?? 0,
-        hardBestStreak:    dbUser.score?.hardBestStreak    ?? 0,
+        easyScore:           dbUser.score?.easyScore           ?? 0,
+        easyConsecutiveWins: dbUser.score?.easyConsecutiveWins ?? 0,
+        hardScore:           dbUser.score?.hardScore           ?? 0,
+        hardConsecutiveWins: dbUser.score?.hardConsecutiveWins ?? 0,
       },
     };
   }
