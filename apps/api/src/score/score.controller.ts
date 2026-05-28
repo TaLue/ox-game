@@ -1,6 +1,7 @@
 import { Controller, DefaultValuePipe, Get, ParseIntPipe, Query, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { Difficulty, LeaderboardEntry, ScoreDto } from '@ox/shared';
+import { Public } from '../common/public.decorator';
 import { RequestUser } from '../common/request-user.interface';
 import { ScoreService } from './score.service';
 
@@ -14,6 +15,7 @@ export class ScoreController {
     return this.score.getScore(user.id);
   }
 
+  @Public()
   @Get('leaderboard')
   getLeaderboard(
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
