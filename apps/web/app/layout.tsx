@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'OX Game',
   description: 'Tic-Tac-Toe with OAuth2 login, streaks, and real-time leaderboard',
+  icons: { icon: '/icon.svg' },
 };
 
 const THEME_SCRIPT = `
