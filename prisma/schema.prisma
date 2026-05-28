@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  provider    String
+  providerId  String
+  email       String   @unique
+  displayName String
+  role        Role     @default(PLAYER)
+  score       Score?
+  games       Game[]
+  createdAt   DateTime @default(now())
+
+  @@unique([provider, providerId])
+}
+
+model Score {
+  id                String   @id @default(cuid())
+  user              User     @relation(fields: [userId], references: [id])
+  userId            String   @unique
+  easyCurrentStreak Int      @default(0)
+  easyBestStreak    Int      @default(0)
+  hardCurrentStreak Int      @default(0)
+  hardBestStreak    Int      @default(0)
+  updatedAt         DateTime @updatedAt
+
+  @@index([easyBestStreak])
+  @@index([hardBestStreak])
+}
+
+model Game {
+  id         String     @id @default(cuid())
+  user       User       @relation(fields: [userId], references: [id])
+  userId     String
+  status     GameStatus @default(IN_PROGRESS)
+  difficulty Difficulty @default(EASY)
+  board      Json
+  moves      Json
+  createdAt  DateTime   @default(now())
+  finishedAt DateTime?
+
+  @@index([userId])
+}
+
+enum Role {
+  PLAYER
+  ADMIN
+}
+
+enum GameStatus {
+  IN_PROGRESS
+  PLAYER_WIN
+  BOT_WIN
+  DRAW
+}
+
+enum Difficulty {
+  EASY
+  HARD
+}

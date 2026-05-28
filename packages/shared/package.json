@@ -1,0 +1,11 @@
+{
+  "name": "@ox/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "echo \"No tests in shared package\" && exit 0"
+  }
+}
